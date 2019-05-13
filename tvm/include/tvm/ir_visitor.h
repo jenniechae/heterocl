@@ -9,7 +9,7 @@
 #include <tvm/ir_functor.h>
 #include "./ir.h"
 
-namespace tvm {
+namespace TVM {
 namespace ir {
 
 /*!
@@ -134,6 +134,9 @@ class TVM_DLL IRVisitor {
   virtual void Visit_(const Return* op);
   virtual void Visit_(const Break* op);
   virtual void Visit_(const While* op);
+  virtual void Visit_(const Reuse* op);
+  virtual void Visit_(const Partition* op);
+  virtual void Visit_(const Stencil* op);
 };
 
 /*!
@@ -145,6 +148,6 @@ class TVM_DLL IRVisitor {
 void PostOrderVisit(const NodeRef& node, std::function<void(const NodeRef&)> fvisit);
 
 }  // namespace ir
-}  // namespace tvm
+}  // namespace TVM
 
 #endif  // TVM_IR_VISITOR_H_

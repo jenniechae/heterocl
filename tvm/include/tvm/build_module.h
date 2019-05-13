@@ -12,7 +12,7 @@
 #include "./tvm/schedule_pass.h"
 #include "./tvm/lowered_func.h"
 
-namespace tvm {
+namespace TVM {
 
 /*!
 * \brief Container for target device information.
@@ -130,6 +130,8 @@ class BuildConfigNode : public Node {
   /*! \brief Whether to partition const loop */
   bool partition_const_loop = false;
 
+  bool generate_reuse_buffer = true;
+
   void VisitAttrs(AttrVisitor* v) final {
     v->Visit("data_alignment", &data_alignment);
     v->Visit("offset_factor", &offset_factor);
@@ -141,6 +143,7 @@ class BuildConfigNode : public Node {
     v->Visit("restricted_func", &restricted_func);
     v->Visit("detect_global_barrier", &detect_global_barrier);
     v->Visit("partition_const_loop", &partition_const_loop);
+    v->Visit("generate_reuse_buffer", &generate_reuse_buffer);
   }
 
   static constexpr const char* _type_key = "BuildConfig";
@@ -183,6 +186,6 @@ EXPORT runtime::Module build(const Array<LoweredFunc>& funcs,
                              Target* target_host,
                              const BuildConfig& config);
 
-}  // namespace tvm
+}  // namespace TVM
 
 #endif  // TVM_BUILD_MODULE_H_

@@ -9,7 +9,7 @@
 #include <tvm/ir_mutator.h>
 #include "./ir_util.h"
 
-namespace tvm {
+namespace TVM {
 namespace ir {
 
 // NOTE: this optimization can only be applied
@@ -40,7 +40,7 @@ class AttrScopeLifter : public IRMutator {
       attr_value_ = Expr();
       return Allocate::make(
         op->buffer_var, op->type,
-        op->extents, op->condition, body,
+        op->extents, op->condition, body, op->attrs,
         op->new_expr, op->free_function);
     } else {
       return stmt;
@@ -200,4 +200,4 @@ Stmt LiftAttrScope(Stmt stmt, std::string attr_key) {
 }
 
 }  // namespace ir
-}  // namespace tvm
+}  // namespace TVM

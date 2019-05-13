@@ -7,7 +7,7 @@
 #include "./codegen_c.h"
 #include "../arithmetic/compute_expr.h"
 
-namespace tvm {
+namespace TVM {
 namespace codegen {
 
 using namespace ir;
@@ -640,22 +640,6 @@ void CodeGenC::VisitStmt_(const Store* op) {
       std::string vid = GetVarID(op->buffer_var.get());
       for (int i = 0; i < t.lanes(); ++i) {
         this->PrintIndent();
-        /* Don't need this!!
-        Type elem_type = t.element_of();
-        if (!HandleTypeMatch(op->buffer_var.get(), elem_type)) {
-          stream << "((";
-          if (op->buffer_var.get()->type.is_handle()) {
-            auto it = alloc_storage_scope_.find(op->buffer_var.get());
-            if (it != alloc_storage_scope_.end()) {
-              PrintStorageScope(it->second, stream);
-              stream << ' ';
-            }
-          }
-          PrintType(elem_type, stream);
-          stream << "*)" << vid << ')';
-        } else {
-          stream << vid;
-        } */
         stream << vid;
         stream << '[';
         PrintVecElemLoad(index, op->index.type(), i, stream);
@@ -937,4 +921,4 @@ void CodeGenC::VisitStmt_(const While *op) {
 
 
 }  // namespace codegen
-}  // namespace tvm
+}  // namespace TVM

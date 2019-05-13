@@ -8,7 +8,7 @@
 #include "IRVisitor.h"
 #include <unordered_map>
 
-namespace HalideIR {
+namespace Halide {
 namespace Internal {
 
 /** A base class for passes over the IR which modify it
@@ -96,6 +96,9 @@ protected:
     EXPORT virtual void visit(const Return *, const Stmt &);
     EXPORT virtual void visit(const Break *, const Stmt &);
     EXPORT virtual void visit(const While *, const Stmt &);
+    EXPORT virtual void visit(const Reuse *, const Stmt &);
+    EXPORT virtual void visit(const Partition *, const Stmt &);
+    EXPORT virtual void visit(const Stencil *, const Stmt &);
 };
 
 

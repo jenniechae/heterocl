@@ -6,7 +6,7 @@
 #include <tvm/ir_visitor.h>
 #include <unordered_set>
 
-namespace tvm {
+namespace TVM {
 namespace ir {
 // visitor to implement apply
 class IRApplyVisit : public IRVisitor {
@@ -71,6 +71,9 @@ void IRVisitor::Visit_(const Allocate *op) {
   IRVisitor* v = this;
   for (size_t i = 0; i < op->extents.size(); i++) {
     v->Visit(op->extents[i]);
+  }
+  for (size_t i = 0; i < op->attrs.size(); i++) {
+    v->Visit(op->attrs[i]);
   }
   v->Visit(op->body);
   v->Visit(op->condition);
@@ -260,6 +263,16 @@ void IRVisitor::Visit_(const While *op) {
   this->Visit(op->body);
 }
 
+void IRVisitor::Visit_(const Reuse *op) {
+  this->Visit(op->body);
+}
+
+void IRVisitor::Visit_(const Partition *op) {}
+
+void IRVisitor::Visit_(const Stencil *op) {
+  this->Visit(op->body);
+}
+
 #define DEFINE_OP_NO_VISIT_(OP)                     \
   void IRVisitor::Visit_(const OP* op) {}
 
@@ -327,7 +340,10 @@ TVM_STATIC_IR_FUNCTOR(IRVisitor, vtable)
 .DISPATCH_TO_VISIT(KernelStmt)
 .DISPATCH_TO_VISIT(Return)
 .DISPATCH_TO_VISIT(Break)
-.DISPATCH_TO_VISIT(While);
+.DISPATCH_TO_VISIT(While)
+.DISPATCH_TO_VISIT(Reuse)
+.DISPATCH_TO_VISIT(Partition)
+.DISPATCH_TO_VISIT(Stencil);
 
 }  // namespace ir
-}  // namespace tvm
+}  // namespace TVM

@@ -16,14 +16,14 @@
 #include "./expr.h"
 #include "./arithmetic.h"
 
-namespace tvm {
+namespace TVM {
 
 // Internal node container of Tensor
 class TensorNode;
 // internal node container for Operation
 class OperationNode;
 
-using HalideIR::IR::FunctionRef;
+using Halide::IR::FunctionRef;
 
 /*!
  * \brief Tensor structure representing a possible input,
@@ -39,6 +39,11 @@ class Tensor : public NodeRef {
    * \return the pointer to the internal node container
    */
   inline const TensorNode* operator->() const;
+  /*!
+   * \brief access the internal node container
+   * \return the pointer to the internal node container
+   */
+  inline TensorNode* operator->();
   /*!
    * \brief check if two tensors equals each other.
    * \param other tensor to be checked.
@@ -169,6 +174,10 @@ inline const TensorNode* Tensor::operator->() const {
   return static_cast<const TensorNode*>(node_.get());
 }
 
+inline TensorNode* Tensor::operator->() {
+  return static_cast<TensorNode*>(node_.get());
+}
+
 inline size_t Tensor::ndim() const {
   return (*this)->shape.size();
 }
@@ -221,19 +230,19 @@ DEFINE_OVERLOAD_SLICE_BINARY_OP(<<);
 DEFINE_OVERLOAD_SLICE_BINARY_OP(>);  // NOLINT(*)
 DEFINE_OVERLOAD_SLICE_BINARY_OP(<);  // NOLINT(*)
 
-}  // namespace tvm
+}  // namespace TVM
 
 namespace std {
 template <>
-struct hash<::tvm::Operation> {
-  std::size_t operator()(const ::tvm::Operation& k) const {
+struct hash<::TVM::Operation> {
+  std::size_t operator()(const ::TVM::Operation& k) const {
     return k.hash();
   }
 };
 
 template <>
-struct hash<::tvm::Tensor> {
-  std::size_t operator()(const ::tvm::Tensor& k) const {
+struct hash<::TVM::Tensor> {
+  std::size_t operator()(const ::TVM::Tensor& k) const {
     if (k.defined() && k->op.defined()) {
       return k->op.hash();
     } else{

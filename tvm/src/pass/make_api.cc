@@ -16,7 +16,7 @@
 #include "./arg_binder.h"
 #include "../arithmetic/compute_expr.h"
 
-namespace tvm {
+namespace TVM {
 namespace ir {
 
 inline Stmt MakeAssertEQ(Expr lhs, Expr rhs, std::string msg) {
@@ -224,6 +224,7 @@ LoweredFunc MakeKernelAPI(Stmt body,
   std::shared_ptr<LoweredFuncNode> n = std::make_shared<LoweredFuncNode>();
   n->name = name;
   n->args = args;
+  n->api_args = api_args;
   n->handle_data_type = binder.def_handle_dtype();
   n->is_packed_func = true;
   n->is_restricted = true;
@@ -278,4 +279,4 @@ LoweredFunc BindDeviceType(LoweredFunc f,
 }
 
 }  // namespace ir
-}  // namespace tvm
+}  // namespace TVM

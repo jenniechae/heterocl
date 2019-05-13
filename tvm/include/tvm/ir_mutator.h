@@ -11,7 +11,7 @@
 #include "./expr.h"
 #include "./ir.h"
 
-namespace tvm {
+namespace TVM {
 namespace ir {
 /*!
  * \brief a base class for mutator to iterative mutate the IR
@@ -74,6 +74,9 @@ class TVM_DLL IRMutator {
   virtual Stmt Mutate_(const Return* op, const Stmt& s);
   virtual Stmt Mutate_(const Break* op, const Stmt& s);
   virtual Stmt Mutate_(const While* op, const Stmt& s);
+  virtual Stmt Mutate_(const Reuse* op, const Stmt& s);
+  virtual Stmt Mutate_(const Partition* op, const Stmt& s);
+  virtual Stmt Mutate_(const Stencil* op, const Stmt& s);
 
   virtual Expr Mutate_(const Variable* op, const Expr& e);
   virtual Expr Mutate_(const Load* op, const Expr& e);
@@ -133,5 +136,5 @@ Stmt IRTransform(const Stmt& node,
                  const runtime::PackedFunc& postorder,
                  const Array<Expr>& only_enable = {});
 }  // namespace ir
-}  // namespace tvm
+}  // namespace TVM
 #endif  // TVM_IR_MUTATOR_H_

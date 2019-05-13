@@ -19,7 +19,7 @@
 #include "./schedule.h"
 #include "./lowered_func.h"
 
-namespace tvm {
+namespace TVM {
 namespace ir {
 
 /*!
@@ -157,6 +157,21 @@ Stmt Substitute(Stmt stmt, const Map<Var, Expr>& value_map);
  * \return The converted expression.
  */
 Expr Substitute(Expr expr, const Map<Var, Expr>& value_map);
+
+/*!
+ * \brief Transform a 1D index to a multi-dimensional index.
+ * \param indices the index to be transformed
+ * \param shape the shape of the tensor
+ * \return The transformed index.
+ */
+std::vector<Expr> ExtractIndices(Expr index, const Array<Expr>& shape);
+
+Expr FlattenIndices(std::vector<Expr> indices, const Array<Expr> shape);
+
+Array<Expr> InferReuseBound(
+    const Stmt& body,
+    const Variable* target, 
+    const Array<Expr>& target_shape); 
 
 /*!
  * \brief inline all calls of f in stmt.
@@ -328,6 +343,18 @@ Stmt RewriteUnsafeSelect(Stmt stmt);
 Stmt LowerStorageAccessInfo(Stmt stmt);
 
 /*!
+ * \brief Generate a reuse buffer accordin to the Reuse node.
+ * Only run this pass if the backend needs to.
+ *
+ * \param stmt The stmt to be trasnformed
+ * \param arg_list A list of input arguments
+ * \return Transformed stmt.
+ */
+Stmt GenerateReuseBuffer(Stmt stmt, Array<NodeRef> arg_list);
+
+Stmt LiftAllocateAttrs(Stmt stmt);
+
+/*!
  * \brief Make an user callable API LoweredFunc.
  *
  *  The main task of this function is to create code to :
@@ -457,6 +484,6 @@ LoweredFunc PointerValueTypeRewrite(LoweredFunc f);
  */
 LoweredFunc LowerIntrin(LoweredFunc f, const std::string& target);
 }  // namespace ir
-}  // namespace tvm
+}  // namespace TVM
 
 #endif  // TVM_IR_PASS_H_

@@ -13,7 +13,7 @@
 #include "../../pass/ir_util.h"
 #include "../../arithmetic/compute_expr.h"
 
-namespace tvm {
+namespace TVM {
 namespace codegen {
 
 std::unique_ptr<CodeGenLLVM> CodeGenLLVM::Create(llvm::TargetMachine *tm) {
@@ -486,32 +486,31 @@ void CodeGenLLVM::CreateSerialFor(llvm::Value* begin,
 }
 
 // cast operatpr
-// TODO: handle float and fixed-point
 llvm::Value* CodeGenLLVM::CreateCast(Type from, Type to, llvm::Value* value) {
   llvm::Type * target = LLVMType(to);
   if (value->getType() == target) return value;
   if (to.is_handle()) {
     return builder_->CreateBitCast(value, target);
-  } else if ((from.is_fixed() && to.is_fixed()) || (from.is_ufixed() && to.is_ufixed())) {
+  } else if ((from.is_fixed() || from.is_ufixed()) && (to.is_fixed() || to.is_ufixed())) {
     if (from.bits() > to.bits()) {
       int diff = from.fracs() - to.fracs();
       if (diff < 0) {
         llvm::Value* ldiff = llvm::ConstantInt::get(LLVMType(to), -diff);
         llvm::Value* trunc = builder_->CreateTruncOrBitCast(value, target);
         return builder_->CreateShl(trunc, ldiff);
-      }
-      else if (diff > 0) {
+      } else if (diff > 0) {
         llvm::Value* ldiff = llvm::ConstantInt::get(LLVMType(from), diff);
         llvm::Value* sr;
         if (to.is_ufixed()) sr = builder_->CreateLShr(value, ldiff);
         else sr = builder_->CreateAShr(value, ldiff);
         llvm::Value* ret = builder_->CreateTruncOrBitCast(sr, target);
         return ret;
+      } else {
+        return builder_->CreateTruncOrBitCast(value, target);
       }
-      else return builder_->CreateTruncOrBitCast(value, target);
     } else {
       llvm::Value* ext;
-      if(to.is_ufixed()) ext = builder_->CreateZExtOrBitCast(value, target);
+      if(from.is_ufixed()) ext = builder_->CreateZExtOrBitCast(value, target);
       else ext = builder_->CreateSExtOrBitCast(value, target);
       int diff = to.fracs() - from.fracs();
       if (diff < 0) {
@@ -577,6 +576,7 @@ llvm::Value* CodeGenLLVM::GetConstString(const std::string& str) {
 
 llvm::Value* CodeGenLLVM::CreateBufferPtr(
     Type t, llvm::Value* buffer, llvm::Value* index) {
+  index = CreateCast(t, Int(32), index);
   CHECK_EQ(t.lanes(), 1);
   llvm::PointerType* btype = llvm::dyn_cast<llvm::PointerType>(buffer->getType());
   CHECK(btype != nullptr);
@@ -584,7 +584,6 @@ llvm::Value* CodeGenLLVM::CreateBufferPtr(
   if (btype != ptype) {
     buffer = builder_->CreatePointerCast(buffer, ptype);
   }
-
   return builder_->CreateInBoundsGEP(buffer, index);
 }
 
@@ -643,13 +642,28 @@ llvm::Value* CodeGenLLVM::CreateIntrinsic(const Call* op) {
         module_.get(), id, sig_type);
     return builder_->CreateCall(f, arg_value);
   } else if (op->is_intrinsic(Call::bitwise_and)) {
-    return builder_->CreateAnd(MakeValue(op->args[0]), MakeValue(op->args[1]));
+    llvm::Value* a = MakeValue(op->args[0]);
+    llvm::Value* b = MakeValue(op->args[1]);
+    Type ta = op->args[0].type();
+    Type tb = op->args[1].type();
+    Type t = Type(ta.code(), ta.bits(), ta.lanes(), 0);
+    return builder_->CreateAnd(a, CreateCast(tb, t, b));
   } else if (op->is_intrinsic(Call::bitwise_or)) {
-    return builder_->CreateOr(MakeValue(op->args[0]), MakeValue(op->args[1]));
+    llvm::Value* a = MakeValue(op->args[0]);
+    llvm::Value* b = MakeValue(op->args[1]);
+    Type ta = op->args[0].type();
+    Type tb = op->args[1].type();
+    Type t = Type(ta.code(), ta.bits(), ta.lanes(), 0);
+    return builder_->CreateOr(a, CreateCast(tb, t, b));
   } else if (op->is_intrinsic(Call::bitwise_not)) {
     return builder_->CreateNot(MakeValue(op->args[0]));
   } else if (op->is_intrinsic(Call::bitwise_xor)) {
-    return builder_->CreateXor(MakeValue(op->args[0]), MakeValue(op->args[1]));
+    llvm::Value* a = MakeValue(op->args[0]);
+    llvm::Value* b = MakeValue(op->args[1]);
+    Type ta = op->args[0].type();
+    Type tb = op->args[1].type();
+    Type t = Type(ta.code(), ta.bits(), ta.lanes(), 0);
+    return builder_->CreateXor(a, CreateCast(tb, t, b));
   } else if (op->is_intrinsic(Call::shift_left)) {
     llvm::Value* a = MakeValue(op->args[0]);
     llvm::Value* b = MakeValue(op->args[1]);
@@ -750,11 +764,21 @@ llvm::Value* CodeGenLLVM::VisitExpr_(const Cast* op) {
   return val;
 }
 llvm::Value* CodeGenLLVM::VisitExpr_(const IntImm* op) {
-  return llvm::ConstantInt::getSigned(LLVMType(op->type), op->value);
+  llvm::Value* val = llvm::ConstantInt::getSigned(LLVMType(op->type), op->value);
+  if (op->type.fracs() > 0) {
+    llvm::Value* fracs = llvm::ConstantInt::get(LLVMType(op->type), op->type.fracs());
+    return builder_->CreateShl(val, fracs);
+  }
+  return val;
 }
 
 llvm::Value* CodeGenLLVM::VisitExpr_(const UIntImm* op) {
-  return llvm::ConstantInt::get(LLVMType(op->type), op->value);
+  llvm::Value* val = llvm::ConstantInt::get(LLVMType(op->type), op->value);
+  if (op->type.fracs() > 0) {
+    llvm::Value* fracs = llvm::ConstantInt::get(LLVMType(op->type), op->type.fracs());
+    return builder_->CreateShl(val, fracs);
+  }
+  return val;
 }
 
 llvm::Value* CodeGenLLVM::VisitExpr_(const FloatImm* op) {
@@ -822,8 +846,20 @@ llvm::Value* CodeGenLLVM::VisitExpr_(const Div* op) {
       is_const_power_of_two_integer(op->b, &shift)) {
     return builder_->CreateAShr(a, shift);
   } else if (op->type.is_fixed()) {
+    if (op->type.fracs() > 0) {
+      llvm::Value* fa = CreateCast(op->type, Float(64), a);
+      llvm::Value* fb = CreateCast(op->type, Float(64), b);
+      llvm::Value* div = builder_->CreateFDiv(fa, fb);
+      return CreateCast(Float(64), op->type, div);
+    }
     return builder_->CreateSDiv(a, b);
   } else if (op->type.is_ufixed()) {
+    if (op->type.fracs() > 0) {
+      llvm::Value* fa = CreateCast(op->type, Float(64), a);
+      llvm::Value* fb = CreateCast(op->type, Float(64), b);
+      llvm::Value* div = builder_->CreateFDiv(fa, fb);
+      return CreateCast(Float(64), op->type, div);
+    }
     return builder_->CreateUDiv(a, b);
   } else {
     CHECK(op->type.is_float());
@@ -1170,12 +1206,6 @@ void CodeGenLLVM::VisitStmt_(const Allocate* op) {
   llvm::Value* buf = nullptr;
   // cast to power of two
   Type dtype = op->type;
-  if (dtype.is_fixed() || dtype.is_ufixed()) {
-    if (dtype.bits() <= 8) dtype = Type(dtype.code(), 8, dtype.lanes());
-    else if (dtype.bits() <= 16) dtype = Type(dtype.code(), 16, dtype.lanes());
-    else if (dtype.bits() <= 32) dtype = Type(dtype.code(), 32, dtype.lanes());
-    else dtype = Type(dtype.code(), 64, dtype.lanes());
-  }
   if (op->new_expr.defined()) {
     CHECK_EQ(op->free_function, "nop");
     buf = MakeValue(op->new_expr);
@@ -1363,6 +1393,10 @@ void CodeGenLLVM::VisitStmt_(const While* op) {
   break_bbs_.pop_back();
 }
 
+void CodeGenLLVM::VisitStmt_(const Stencil* op) {
+  this->VisitStmt(op->body);
+}
+
 }  // namespace codegen
-}  // namespace tvm
+}  // namespace TVM
 #endif  // TVM_LLVM_VERSION

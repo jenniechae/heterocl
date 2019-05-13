@@ -15,7 +15,7 @@
 #include "./expr.h"
 #include "./tensor.h"
 
-namespace tvm {
+namespace TVM {
 
 // Internal node container of lowered function.
 class LoweredFuncNode;
@@ -57,6 +57,7 @@ class LoweredFuncNode : public FunctionBaseNode {
    *  This function can only take pod type(int, float) and void* as arguments.
    */
   Array<Var> args;
+  Array<NodeRef> api_args;
   /*!
    * \brief The IterVar axis of threads
    *  Each axis need host function to specify a size.
@@ -122,12 +123,12 @@ inline const LoweredFuncNode* LoweredFunc::operator->() const {
   return static_cast<const LoweredFuncNode*>(node_.get());
 }
 
-}  // namespace tvm
+}  // namespace TVM
 
 namespace std {
 template <>
-struct hash<::tvm::LoweredFunc> {
-  std::size_t operator()(const ::tvm::LoweredFunc& k) const {
+struct hash<::TVM::LoweredFunc> {
+  std::size_t operator()(const ::TVM::LoweredFunc& k) const {
     return k.hash();
   }
 };

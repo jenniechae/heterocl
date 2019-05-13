@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include "../arithmetic/compute_expr.h"
 
-namespace tvm {
+namespace TVM {
 namespace ir {
 
 // If expression is touched by var.
@@ -400,7 +400,7 @@ class VTInjector : public IRMutator {
     } else {
       return Allocate::make(
           op->buffer_var, op->type,
-          extents, condition, body,
+          extents, condition, body, op->attrs,
           op->new_expr, op->free_function);
     }
   }
@@ -488,4 +488,4 @@ Stmt InjectVirtualThread(Stmt stmt) {
 }
 
 }  // namespace ir
-}  // namespace tvm
+}  // namespace TVM

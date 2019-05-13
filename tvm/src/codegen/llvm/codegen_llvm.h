@@ -18,7 +18,7 @@
 #include "./llvm_common.h"
 #include "../../runtime/thread_storage_scope.h"
 
-namespace tvm {
+namespace TVM {
 namespace codegen {
 
 using namespace ir;
@@ -134,6 +134,8 @@ class CodeGenLLVM :
   void VisitStmt_(const Return* op) override;
   void VisitStmt_(const Break* op) override;
   void VisitStmt_(const While* op) override;
+  void VisitStmt_(const Partition* op) override {};
+  void VisitStmt_(const Stencil* op) override;
 
  protected:
   /*! \brief The storage information */
@@ -281,6 +283,6 @@ class CodeGenLLVM :
   std::unordered_set<const Variable*> volatile_buf_save;
 };
 }  // namespace codegen
-}  // namespace tvm
+}  // namespace TVM
 #endif  // LLVM_VERSION
 #endif  // TVM_CODEGEN_LLVM_CODEGEN_LLVM_H_

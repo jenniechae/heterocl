@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace tvm {
+namespace TVM {
 namespace ir {
 namespace {
 class IRVerifySSA final : public IRVisitor {
@@ -137,7 +137,7 @@ class IRConvertSSA final : public IRMutator {
       op = stmt.as<Allocate>();
       return Allocate::make(
           new_var, op->type, op->extents, op->condition,
-          op->body, op->new_expr, op->free_function);
+          op->body, op->attrs, op->new_expr, op->free_function);
     } else {
       defined_.insert(v.get());
       return IRMutator::Mutate_(op, s);
@@ -187,4 +187,4 @@ Stmt ConvertSSA(Stmt stmt) {
 }
 
 }  // namespace ir
-}  // namespace tvm
+}  // namespace TVM

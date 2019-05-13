@@ -13,7 +13,7 @@
 #include "./message_passing.h"
 #include "../runtime/thread_storage_scope.h"
 
-namespace tvm {
+namespace TVM {
 namespace schedule {
 
 using runtime::ThreadScope;
@@ -201,6 +201,7 @@ Map<IterVar, Range> InferBound(const Schedule& sch) {
   ctx.attach_path = CreateAttachPath(sch);
   // Run inference.
   std::unordered_map<IterVar, Range> ret;
+  /*
   for (size_t i = sch->stages.size(); i != 0; --i) {
     const Stage& stage = sch->stages[i - 1];
     InferRootBound(stage, ctx, &ret);
@@ -214,9 +215,9 @@ Map<IterVar, Range> InferBound(const Schedule& sch) {
   for (auto& p : ret) {
     ret[p.first] = Range::make_by_min_extent(ir::Simplify(p.second->min),
                                              ir::Simplify(p.second->extent));
-  }
+  }*/
   return Map<IterVar, Range>(ret.begin(), ret.end());
 }
 
 }  // namespace schedule
-}  // namespace tvm
+}  // namespace TVM

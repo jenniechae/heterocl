@@ -12,7 +12,7 @@
 #include "./base.h"
 #include "./expr.h"
 
-namespace tvm {
+namespace TVM {
 
 // Internal node container Buffer
 class BufferNode;
@@ -73,6 +73,11 @@ class Buffer : public NodeRef {
    * \return the pointer to the internal node container
    */
   inline const BufferNode* operator->() const;
+  /*!
+   * \brief access the internal node container
+   * \return the pointer to the internal node container
+   */
+  inline BufferNode* operator->();
 
   /*! \brief specify container node */
   using ContainerType = BufferNode;
@@ -150,6 +155,10 @@ inline const BufferNode* Buffer::operator->() const {
   return static_cast<const BufferNode*>(node_.get());
 }
 
+inline BufferNode* Buffer::operator->() {
+  return static_cast<BufferNode*>(node_.get());
+}
+
 /*!
  * \brief Construct a new buffer given shape, and dtype.
  * \param shape The shape of the buffer,
@@ -161,5 +170,5 @@ inline const BufferNode* Buffer::operator->() const {
 TVM_DLL Buffer decl_buffer(Array<Expr> shape,
                            Type dtype = Float(32),
                            std::string name = "buffer");
-}  // namespace tvm
+}  // namespace TVM
 #endif  // TVM_BUFFER_H_

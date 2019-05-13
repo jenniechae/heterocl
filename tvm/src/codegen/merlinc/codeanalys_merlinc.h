@@ -17,7 +17,7 @@
 #include <unordered_set>
 #include "../codegen_source_base.h"
 
-namespace tvm {
+namespace TVM {
 namespace codegen {
 
 using namespace ir;
@@ -128,7 +128,9 @@ class CodeAnalysMerlinC :
   void VisitStmt_(const Return* op) override;
   void VisitStmt_(const Break* op) override;
   void VisitStmt_(const While* op) override;
-
+  void VisitStmt_(const Reuse* op) override;
+  void VisitStmt_(const Partition* op) override;
+  void VisitStmt_(const Stencil* op) override;
   /*!
    * Print Type represetnation of type t.
    * \param t The type representation.
@@ -199,5 +201,5 @@ class CodeAnalysMerlinC :
 };
 
 }  // namespace codegen
-}  // namespace tvm
+}  // namespace TVM
 #endif  // TVM_CODEGEN_CODEGEN_C_H_

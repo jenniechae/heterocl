@@ -2,6 +2,7 @@ import heterocl as hcl
 import numpy as np
 
 def test_schedule_no_return():
+    hcl.init()
     A = hcl.placeholder((10,))
     B = hcl.placeholder((10,))
 
@@ -23,6 +24,7 @@ def test_schedule_no_return():
         assert(_B[i] == _A[i] + 1)
 
 def test_schedule_return():
+    hcl.init()
     A = hcl.placeholder((10,))
 
     def algorithm(A):
@@ -43,6 +45,7 @@ def test_schedule_return():
         assert(_B[i] == _A[i] + 1)
 
 def test_schedule_return_multi():
+    hcl.init()
     A = hcl.placeholder((10,))
 
     def algorithm(A):
@@ -67,11 +70,8 @@ def test_schedule_return_multi():
         assert(_B[i] == _A[i] + 1)
         assert(_C[i] == _A[i] + 2)
 
-"""
-Testing API: make_scheme & make_schedule_from_scheme
-"""
-
 def test_resize():
+    hcl.init()
 
     def algorithm(A):
         return hcl.compute(A.shape, lambda x: A[x] + 1, "B")
@@ -94,3 +94,26 @@ def test_resize():
 
     for i in range(10):
         assert(_B[i] == (a[i] + 1)%4)
+
+def test_select():
+    hcl.init(hcl.Float())
+    A = hcl.placeholder((10,))
+    B = hcl.compute(A.shape, lambda x: hcl.select(A[x] > 0.5, A[x], 0))
+    s = hcl.create_schedule([A, B])
+    f = hcl.build(s)
+
+    np_A = np.random.rand(10)
+    np_B = np.zeros(10)
+    np_C = np.zeros(10)
+
+    for i in range(0, 10):
+        np_C[i] = np_A[i] if np_A[i] > 0.5 else 0
+
+    hcl_A = hcl.asarray(np_A)
+    hcl_B = hcl.asarray(np_B)
+
+    f(hcl_A, hcl_B)
+
+    np_B = hcl_B.asnumpy()
+
+    assert np.allclose(np_B, np_C)
