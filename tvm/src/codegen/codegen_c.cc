@@ -925,7 +925,7 @@ void CodeGenC::VisitStmt_(const Break *op) {
 }
 
 void CodeGenC::VisitStmt_(const While *op) {
-  std::string condition = PrintExpr(op->condition);
+  std::string condition Expr(op->condition);
   PrintIndent();
   stream << "while (" << condition << ") {\n";
   int while_scope = BeginScope();
