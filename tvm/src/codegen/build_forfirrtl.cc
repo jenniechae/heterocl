@@ -6,7 +6,7 @@
 #include "./codegen_forfirrtl.h"
 #include "./build_common.h"
 
-namespace tvm {
+namespace TVM {
 namespace codegen {
 
 std::string BuildFORFIRRTL(Array<LoweredFunc> funcs) {

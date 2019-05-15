@@ -12,7 +12,7 @@
 #include "./codegen_c.h"
 #include "./merlinc/codeanalys_merlinc.h"
 
-namespace tvm {
+namespace TVM {
 namespace codegen {
 
 using namespace ir;

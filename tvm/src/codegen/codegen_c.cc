@@ -909,7 +909,7 @@ void CodeGenC::VisitStmt_(const Break *op) {
 }
 
 void CodeGenC::VisitStmt_(const While *op) {
-  std::string condition Expr(op->condition);
+  std::string condition = PrintExpr(op->condition);
   PrintIndent();
   stream << "while (" << condition << ") {\n";
   int while_scope = BeginScope();
@@ -919,6 +919,8 @@ void CodeGenC::VisitStmt_(const While *op) {
   stream << "}\n";
 }
 
+void CodeGenC::VisitStmt_(const Partition* op) {
+}
 
 }  // namespace codegen
 }  // namespace TVM

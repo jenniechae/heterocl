@@ -10,7 +10,7 @@
 #include "./codegen_forfirrtl.h"
 #include "./build_common.h"
 
-namespace tvm {
+namespace TVM {
 namespace codegen {
 
 using namespace ir;

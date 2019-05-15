@@ -6,7 +6,7 @@
 #include "./codegen_mulfirrtl.h"
 #include "./build_common.h"
 
-namespace tvm {
+namespace TVM {
 namespace codegen {
 
 std::string BuildMULFIRRTL(Array<LoweredFunc> funcs) {
