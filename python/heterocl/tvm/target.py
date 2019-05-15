@@ -50,11 +50,7 @@ except ImportError as err_msg:
     if _LIB_NAME != "libhcl_runtime.so":
         raise err_msg
 
-<<<<<<< HEAD
-FPGA_TARGETS = ['merlinc', 'soda', 'soda_xhls', 'vhls','forfirrtl', 'mulfirrtl']
-=======
-FPGA_TARGETS = ['merlinc', 'soda', 'soda_xhls', 'vhls', 'ihls', 'vhls_csim']
->>>>>>> 28260e078f7c3fa893fac848c2cf5e42275972f2
+FPGA_TARGETS = ['merlinc', 'soda', 'soda_xhls', 'vhls', 'ihls', 'vhls_csim', 'forfirrtl', 'mulfirrtl']
 
 def _merge_opts(opts, new_opts):
     """Helper function to merge options"""

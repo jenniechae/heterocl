@@ -48,9 +48,9 @@ class CodeGenMULFIRRTL final : public CodeGenC { /*:
   std::string Finish();
 
   /*! \brief print the current indented value */
-  void PrintIndent_return();
-  int BeginScope_return();
-  void EndScope_return(int scope_id);
+  void PrintIndent_body();
+  int BeginScope_body();
+  void EndScope_body(int scope_id);
 
   /*!
    * \brief Print the expression n(or its ssa id if in ssa mode) into os
@@ -153,10 +153,10 @@ class CodeGenMULFIRRTL final : public CodeGenC { /*:
  // std::unordered_map<std::string, std::string> reg_def;
   std::unordered_map<const Variable*, std::string> vid_wire_reg;
   std::unordered_map<const Variable*, bool> is_input;
-  std::ostringstream stream_return;
+  std::ostringstream stream_body;
   /*! \brief The current indentation value of stream_print */
-  int indent_return{0};
-  std::vector<bool> scope_mark_return;
+  int indent_body{0};
+  std::vector<bool> scope_mark_body;
   bool in_for{false};
   /*! \brief whether to print in SSA form */
   bool print_ssa_form_{false};

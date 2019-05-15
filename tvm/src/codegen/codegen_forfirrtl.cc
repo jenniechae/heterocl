@@ -40,13 +40,13 @@ void CodeGenFORFIRRTL::AddFunction(LoweredFunc f,
 
   this->stream << "circuit " << f->name << " :\n";
   int circuit_scope = this->BeginScope();
-  int circuit_scope_r = this->BeginScope_return();
+  int circuit_scope_r = this->BeginScope_body();
   //change line
   this->PrintIndent();
   this->stream << "module " << f->name << " :\n";
   LOG(INFO) << stream.str();
   int module_scope = this->BeginScope();
-  int module_scope_r = this->BeginScope_return();
+  int module_scope_r = this->BeginScope_body();
   //input ports
   for (size_t i = 0; i < f->args.size(); ++i) {
     LOG(INFO) << "in loop";
@@ -107,12 +107,12 @@ void CodeGenFORFIRRTL::AddFunction(LoweredFunc f,
   this->PrintIndent();
   stream << "reset <= neq(reset_1,UInt(1))\n" << "\n";
   this -> PrintIndent();
-  stream << stream_return.str();
+  stream << stream_body.str();
   //deal with the final connections of registers
   this->EndScope(module_scope);
-  this->EndScope_return(module_scope_r);
+  this->EndScope_body(module_scope_r);
   this->EndScope(circuit_scope);
-  this->EndScope_return(circuit_scope_r);
+  this->EndScope_body(circuit_scope_r);
   //might have multiple modules
 }
 
@@ -135,30 +135,30 @@ void CodeGenFORFIRRTL::PrintSSAAssign(
   stream << ";\n";
 }*/
 
-void CodeGenFORFIRRTL::PrintIndent_return() {
-  LOG(INFO) << "PrintIndent_return";
-  for (int i = 0; i < indent_return; ++i) {
-    this->stream_return << ' ';
+void CodeGenFORFIRRTL::PrintIndent_body() {
+  LOG(INFO) << "PrintIndent_body";
+  for (int i = 0; i < indent_body; ++i) {
+    this->stream_body << ' ';
   }
 }
 
-int CodeGenFORFIRRTL::BeginScope_return() {
-  LOG(INFO) << "checkpoint BeginScope_return";
-  int sid = static_cast<int>(scope_mark_return.size());
-  scope_mark_return.push_back(true);
-  indent_return += 2;
+int CodeGenFORFIRRTL::BeginScope_body() {
+  LOG(INFO) << "checkpoint BeginScope_body";
+  int sid = static_cast<int>(scope_mark_body.size());
+  scope_mark_body.push_back(true);
+  indent_body += 2;
   return sid;
 }
 
-void CodeGenFORFIRRTL::EndScope_return(int scope_id) {
-  LOG(INFO) << "checkpoint EndScope_return";
-  scope_mark_return[scope_id] = false;
-  indent_return -= 2;
+void CodeGenFORFIRRTL::EndScope_body(int scope_id) {
+  LOG(INFO) << "checkpoint EndScope_body";
+  scope_mark_body[scope_id] = false;
+  indent_body -= 2;
 }
 
 void CodeGenFORFIRRTL::PrintExpr(const Expr& n, std::ostream& os) {  // NOLINT(*)
   LOG(INFO) << "checkpoint PrintExpr";
-  LOG(INFO) << stream_return.str();
+  LOG(INFO) << stream_body.str();
   if (print_ssa_form_) {
     std::ostringstream temp;
     VisitExpr(n, temp);
@@ -280,19 +280,19 @@ std::string CodeGenFORFIRRTL::GetWire(
   auto reg_init = wire_f_list.find(v);
   std::string wire_reg = wire_reg_auto->second;
   if ( in_for == true && reg_init == wire_f_list.end() ){//first store in For. there was a store before For wire_reg.compare("_r") != 0){
-    this -> PrintIndent_return();
+    this -> PrintIndent_body();
     os << "reg " << vid << "_r : ";
     this -> PrintType(t,os);
     os << ", clk\n";
-    this -> PrintIndent_return();
+    this -> PrintIndent_body();
     os << "wire " << vid << "_f : ";
     this -> PrintType(t,os);
     os << "\n";
-    this -> PrintIndent_return();
+    this -> PrintIndent_body();
     os << vid << "_r <= mux(reset, "; 
     os << vid << "_" << wire_reg <<", ";
     os << vid << "_f)\n";
-    this -> PrintIndent_return();
+    this -> PrintIndent_body();
     os << vid << " <= " << vid << "_f\n";
     //, initialize reg with reset and connect to rightside
     // reg out_r: UInt<32>, clk ;;initialize reg for every variable and input/output port in its FIRST Store. -> Hashmap reg_set[out_r] = 1
@@ -330,7 +330,7 @@ void CodeGenFORFIRRTL::VisitExpr_(const Variable *op, std::ostream& os) {  // NO
 void CodeGenFORFIRRTL::VisitExpr_(const Add *op, std::ostream& os) {  // NOLINT(*)
   LOG(INFO) << "checkpoint VisitExpr_ Add";
   PrintBinaryExpr(op, "add", os, this);
-/*  this->PrintIndent_return();
+/*  this->PrintIndent_body();
   const Variable *a_id = (op->a).get();
   auto op_a_find = wire_f_list.find(a_id);
   if (op_a_find != wire_f_list.end()){
@@ -399,15 +399,15 @@ inline void PrintBinaryIntrinsitc(const Call* op,
 }
 
 void CodeGenFORFIRRTL::VisitStmt_(const Store* op) {
-  stream_return << "\n";
-  this->PrintIndent_return();
-  stream_return << ";;store\n";
+  stream_body << "\n";
+  this->PrintIndent_body();
+  stream_body << ";;store\n";
   LOG(INFO) << "checkpoint VisitStmt_ Store";
   Type t = op->value.type();
   if (t.lanes() == 1) {
     std::string value = this->PrintExpr(op->value);
     LOG(INFO) << "GOT VALUE VisitStmt_ Store ";
-    std::string ref  = this->GetWire(t,op->buffer_var.get(), stream_return);
+    std::string ref  = this->GetWire(t,op->buffer_var.get(), stream_body);
     auto arg_find = var_to_arg.find(op->buffer_var.get());
     if ( arg_find != var_to_arg.end() ) {
       const Variable* arg = arg_find->second;
@@ -421,12 +421,12 @@ void CodeGenFORFIRRTL::VisitStmt_(const Store* op) {
       LOG(INFO) << GetVarID(port->first) << " : " << port->first << port->second;
     }
     //wire_f_list[op->buffer_var.get()] = ref;
-    this->PrintIndent_return();
-    stream_return << "wire " << ref << " : ";
-    this -> PrintType(t,stream_return);
-    stream_return << "\n";
-    this -> PrintIndent_return();
-    stream_return << ref << " <= " << value << "\n";
+    this->PrintIndent_body();
+    stream_body << "wire " << ref << " : ";
+    this -> PrintType(t,stream_body);
+    stream_body << "\n";
+    this -> PrintIndent_body();
+    stream_body << ref << " <= " << value << "\n";
   } else {
     CHECK(is_one(op->predicate))
         << "Predicated store is not supported";
@@ -435,61 +435,61 @@ void CodeGenFORFIRRTL::VisitStmt_(const Store* op) {
 }
 
 void CodeGenFORFIRRTL::VisitStmt_(const For* op) {  
-  stream_return << "\n";
-  this->PrintIndent_return();
-  stream_return << ";;for\n";
+  stream_body << "\n";
+  this->PrintIndent_body();
+  stream_body << ";;for\n";
   LOG(INFO) << "checkpoint VisitStmt_ For";
   //counter
   in_for = true;
-  stream_return << "\n";
-  this->PrintIndent_return();
-  stream_return << ";;set counter\n";
-  PrintIndent_return();
-  stream_return << "wire for_start: UInt<1>\n";
-  PrintIndent_return();
+  stream_body << "\n";
+  this->PrintIndent_body();
+  stream_body << ";;set counter\n";
+  PrintIndent_body();
+  stream_body << "wire for_start: UInt<1>\n";
+  PrintIndent_body();
   //need to get the range of counter
-  stream_return << "reg counter: SInt<32>, clk\n";
-  PrintIndent_return();
-  stream_return << "wire count_add: SInt<32>\n";
-  PrintIndent_return();
-  stream_return << "wire count_for: SInt<32>\n";
-  stream_return << "\n";
-  PrintIndent_return();
-  stream_return << "count_add <= add(counter,SInt(1))\n";
-  PrintIndent_return();
-  stream_return << "count_for <= mux(for_start,count_add,counter)\n";
-  PrintIndent_return();
-  stream_return << "counter <= mux(reset,SInt(0),count_for)\n";
+  stream_body << "reg counter: SInt<32>, clk\n";
+  PrintIndent_body();
+  stream_body << "wire count_add: SInt<32>\n";
+  PrintIndent_body();
+  stream_body << "wire count_for: SInt<32>\n";
+  stream_body << "\n";
+  PrintIndent_body();
+  stream_body << "count_add <= add(counter,SInt(1))\n";
+  PrintIndent_body();
+  stream_body << "count_for <= mux(for_start,count_add,counter)\n";
+  PrintIndent_body();
+  stream_body << "counter <= mux(reset,SInt(0),count_for)\n";
 
   std::string extent = PrintExpr(op->extent);
   CHECK(is_zero(op->min));
-  stream_return << "\n";
-  this->PrintIndent_return();
-  stream_return << ";;for loop iteration\n";
-  PrintIndent_return();
-  stream_return << "wire done: UInt<1>\n";
-  PrintIndent_return();
-  stream_return << "wire counter_done: UInt<1>\n";
-  PrintIndent_return();
-  stream_return << "counter_done <= eq(counter,"<< extent << ")\n";
-  PrintIndent_return();
-  stream_return << "done <= mux(reset, UInt(0),counter_done)\n";
-  PrintIndent_return();
-  stream_return << "for_start <= and(not(counter_done),not(reset))\n";
+  stream_body << "\n";
+  this->PrintIndent_body();
+  stream_body << ";;for loop iteration\n";
+  PrintIndent_body();
+  stream_body << "wire done: UInt<1>\n";
+  PrintIndent_body();
+  stream_body << "wire counter_done: UInt<1>\n";
+  PrintIndent_body();
+  stream_body << "counter_done <= eq(counter,"<< extent << ")\n";
+  PrintIndent_body();
+  stream_body << "done <= mux(reset, UInt(0),counter_done)\n";
+  PrintIndent_body();
+  stream_body << "for_start <= and(not(counter_done),not(reset))\n";
   
   //how to get the names of the variables to be modified
   //maybe first go through the for loop body and save the arguments to be printed out
-  stream_return << "\n";
-  this->PrintIndent_return();
-  stream_return << ";;for loop body\n";
+  stream_body << "\n";
+  this->PrintIndent_body();
+  stream_body << ";;for loop body\n";
   PrintStmt(op->body); 
-  stream_return << "\n";
-  this->PrintIndent_return();
-  stream_return << ";;end of for loop\n";
+  stream_body << "\n";
+  this->PrintIndent_body();
+  stream_body << ";;end of for loop\n";
   for ( auto x = wire_f_list.begin(); x != wire_f_list.end(); ++x ){
       std::string vid = GetVarID(x->first);
-      PrintIndent_return();
-      stream_return << vid << "_f <=  mux(done," << vid << "_r," << vid << "_" << wire_f_list[x->first] << ")\n";
+      PrintIndent_body();
+      stream_body << vid << "_f <=  mux(done," << vid << "_r," << vid << "_" << wire_f_list[x->first] << ")\n";
   in_for = false;
   }
 }
@@ -608,7 +608,7 @@ void CodeGenFORFIRRTL::VisitStmt_(const IfThenElse* op) {
 
 void CodeGenFORFIRRTL::VisitExpr_(const Not *op, std::ostream& os) {  // NOLINT(*)
   LOG(INFO) << "checkpoint VisitExpr_ Not";
-  LOG(INFO) << stream_return.str();
+  LOG(INFO) << stream_body.str();
   os << "not(";
   PrintExpr(op->a, os);
   os <<')';
@@ -616,7 +616,7 @@ void CodeGenFORFIRRTL::VisitExpr_(const Not *op, std::ostream& os) {  // NOLINT(
 
 void CodeGenFORFIRRTL::VisitStmt_(const AssertStmt* op) {
   LOG(INFO) << "checkpoint VisitStmt_ AssertStmt";
-  LOG(INFO) << stream_return.str();
+  LOG(INFO) << stream_body.str();
   this->PrintStmt(op->body);
 }
 
@@ -636,7 +636,7 @@ void CodeGenFORFIRRTL::VisitExpr_(const Load* op, std::ostream& os) {  // NOLINT
   LOG(INFO) << "checkpoint VisitExpr_ Load";
   // delcare type.
   if (op->type.lanes() == 1) {
-    std::string ref = this->GetWire(op->type, op->buffer_var.get(), stream_return);
+    std::string ref = this->GetWire(op->type, op->buffer_var.get(), stream_body);
     os << ref;
   } else {
     CHECK(is_one(op->predicate))
@@ -707,8 +707,8 @@ void CodeGenFORFIRRTL::VisitStmt_(const Evaluate *op) {
     }
   }*/
   std::string vid = this->PrintExpr(op->value);
-  this->PrintIndent_return();
-  this->stream_return << "(void)" << vid << ";\n";
+  this->PrintIndent_body();
+  this->stream_body << "(void)" << vid << ";\n";
 }
 
 void CodeGenFORFIRRTL::VisitExpr_(const Call *op, std::ostream& os) {  // NOLINT(*)
