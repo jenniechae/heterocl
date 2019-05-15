@@ -10,7 +10,7 @@ namespace TVM {
 namespace codegen {
 
 std::string BuildFORFIRRTL(Array<LoweredFunc> funcs) {
-  using tvm::runtime::Registry;
+  using TVM::runtime::Registry;
 
   CodeAnalysMerlinC ca;
   CodeGenFORFIRRTL cg;

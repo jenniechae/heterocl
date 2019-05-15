@@ -10,7 +10,7 @@ namespace TVM {
 namespace codegen {
 
 std::string BuildMULFIRRTL(Array<LoweredFunc> funcs) {
-  using tvm::runtime::Registry;
+  using TVM::runtime::Registry;
 
   CodeAnalysMerlinC ca;
   CodeGenMULFIRRTL cg;
