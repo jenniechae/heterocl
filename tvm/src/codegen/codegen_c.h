@@ -80,9 +80,9 @@ class CodeGenC :
   virtual void InitFuncState(LoweredFunc f);
   // expression
   void VisitExpr_(const Variable* op, std::ostream& os) override;  // NOLINT(*)
-  void VisitExpr_(const Call* op, std::ostream& os) override;  // NOLINT(*)
   void VisitExpr_(const Load* op, std::ostream& os) override;  // NOLINT(*)
   void VisitExpr_(const Let* op, std::ostream& os) override;  // NOLINT(*)
+  void VisitExpr_(const Call* op, std::ostream& os) override;  // NOLINT(*)
   void VisitExpr_(const Add* op, std::ostream& os) override;  // NOLINT(*)
   void VisitExpr_(const Sub* op, std::ostream& os) override;  // NOLINT(*)
   void VisitExpr_(const Mul* op, std::ostream& os) override;  // NOLINT(*)
@@ -129,6 +129,7 @@ class CodeGenC :
   void VisitStmt_(const Return* op) override;
   void VisitStmt_(const Break* op) override;
   void VisitStmt_(const While* op) override;
+  void VisitStmt_(const Partition* op) override;
   /*!
    * Print Type represetnation of type t.
    * \param t The type representation.
