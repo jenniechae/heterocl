@@ -49,19 +49,15 @@ void CodeGenFORFIRRTL::AddFunction(LoweredFunc f,
   int module_scope_r = this->BeginScope_body();
   //input ports
   for (size_t i = 0; i < f->args.size(); ++i) {
-    LOG(INFO) << "in loop";
     Var v = f->args[i];
-    LOG(INFO) << "get var v";
     std::string vid = AllocVarID(v.get());
     is_input[v.get()] = true;
     LOG(INFO) << vid;
-    LOG(INFO) << "end of loop";
   }
 
   LOG(INFO) << stream.str();
   LOG(INFO) << f->body;
   this->PrintStmt(f->body);
-  LOG(INFO) << "AFTER PrintStmt(f->body) in AddFunction";
 
   for (size_t i = 0; i < f->args.size(); ++i) {
     Var v = f->args[i];

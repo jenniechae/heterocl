@@ -60,6 +60,11 @@ void CodeGenMULFIRRTL::AddFunction(LoweredFunc f,
 
   LOG(INFO) << stream.str();
   LOG(INFO) << f->body;
+  whenelse_layer = 0;
+  if (whenelse_var.empty() == 0){
+    LOG(INFO) << "whenelse not empty";
+    whenelse_var = {};
+  }
   this->PrintStmt(f->body);
   LOG(INFO) << "AFTER PrintStmt(f->body) in AddFunction";
 
@@ -108,12 +113,30 @@ void CodeGenMULFIRRTL::AddFunction(LoweredFunc f,
   stream << "reset <= neq(reset_1,UInt(1))\n" << "\n";
   this -> PrintIndent();
   stream << stream_body.str();
-  for ( auto x = wire_f_list.begin(); x != wire_f_list.end(); ++x ){
-      std::string vid = GetVarID(x->first);
+  /*for (size_t i = 0; i < f->args.size(); ++i) {
+    Var v = f->args[i];
+    std::string vid = GetVarID(v.get());
+    if (is_input[v.get()] == false){ 
+      auto arg = map_arg_type[v.get()];
       PrintIndent();
-      const Variable* v = var_to_arg[x->first];
-      if (is_input[v]) stream << vid << "_0 <= " << vid << "\n"; 
-      else stream << vid << "_f <=  mux(done," << vid << "_r," << vid << "_" << wire_f_list[x->first] << ")\n";
+      stream << std::get<0>(arg)  << " <= " << std::get<0>(arg)  << "_f\n";
+    }
+  }*/
+
+  for (size_t i = 0; i < f->args.size(); ++i) {
+    Var v = f->args[i];
+    std::string vid = GetVarID(v.get());
+    std::ostringstream arg_name;
+    auto arg = map_arg_type[vid];
+    LOG(INFO) << "PRINTING input output ports";
+    if (is_input[v.get()] == false){
+      this -> PrintIndent();
+      const Variable* var = var_to_arg[v.get()];
+      stream << std::get<0>(arg) << " <= ";//std::get<0>(arg) << "_f";
+      std::string last_wire = GetWireReg(var->type,var, stream);
+      stream << "\n";
+    }
+
   }
   //deal with the final connections of registers
   this->EndScope(module_scope);
@@ -262,16 +285,61 @@ inline void PrintBinaryExpr(const T* op,
 }
 
 // Print a reference expression to a buffer.
-std::string CodeGenMULFIRRTL::GetWire(
+std::string CodeGenMULFIRRTL::GetWireReg(
     Type t, const Variable* v, std::ostream& os) {
-  LOG(INFO) << "checkpoint GetWire";
-  LOG(INFO) << "in_store" << in_store;
-  LOG(INFO) << "store_same" << store_same;
-  if (in_store){
-    LOG(INFO) << "in if(in_store and !store_same)";
-    store_same = (store_ref_var == v);
-    LOG(INFO) << "store_same" << store_same << GetVarID(v);
+  LOG(INFO) << "checkpoint GetWireReg";
+  std::ostringstream wire;
+  std::string vid = GetVarID(v);
+  auto wire_reg_auto = vid_wire_reg.find(v);
+  std::string wire_reg;
+  if (wire_reg_auto == vid_wire_reg.end()){
+    wire << vid;
+    wire << "_0";
+    vid_wire_reg[v] = "0";
+    wire_reg = "0";
+    this -> PrintIndent_body();
+    os << "wire " << vid << "_0 : ";
+    this -> PrintType(t,os);
+    os << "\n";
+    this -> PrintIndent_body();
+    os << vid << "_0 " << "<= " << vid << "\n";
   }
+  else{
+    wire_reg = wire_reg_auto->second;
+    wire << vid << "_" << wire_reg;
+  }
+  LOG(INFO) << "checkpoint 2 GetWireReg";
+  auto reg_init = wire_f_list.find(v);
+  if ( in_for == true && reg_init == wire_f_list.end() ){//first store in For. there was a store before For wire_reg.compare("_r") != 0){
+    LOG(INFO) << "checkpoint 3 GetWireReg";
+    this -> PrintIndent_body();
+    os << "reg " << vid << "_r : ";
+    this -> PrintType(t,os);
+    os << ", clk\n";
+    this -> PrintIndent_body();
+    os << "wire " << vid << "_f : ";
+    this -> PrintType(t,os);
+    os << "\n";
+    this -> PrintIndent_body();
+    os << vid << "_r <= mux(reset, "; 
+    os << vid << "_" << wire_reg <<", ";
+    os << vid << "_f)\n";
+    //, initialize reg with reset and connect to rightside
+    // reg out_r: UInt<32>, clk ;;initialize reg for every variable and input/output port in its FIRST Store. -> Hashmap reg_set[out_r] = 1
+    //
+    std::ostringstream wire_r;
+    wire_r << vid << "_r";
+    wire_f_list[v] = wire_reg;
+    vid_wire_reg[v] = "r";
+    return wire_r.str();
+  }
+  return wire.str();
+}
+
+// Print a reference expression to a buffer.
+std::string CodeGenMULFIRRTL::GetNewWireReg(
+    Type t, const Variable* v, std::ostream& os) {
+  LOG(INFO) << "checkpoint GetNewWireReg";
   std::ostringstream wire;
   std::string vid = GetVarID(v);
   auto wire_reg_auto = vid_wire_reg.find(v);
@@ -279,10 +347,10 @@ std::string CodeGenMULFIRRTL::GetWire(
     wire << vid;
     wire << "_0";
     vid_wire_reg[v] = "0";
-    this->PrintIndent_body();
-    stream_body << "wire " << GetVarID(v) << "_0 : ";
-    this -> PrintType(t,stream_body);
-    stream_body << "\n";
+    this -> PrintIndent_body();
+    os << "wire " << vid << "_0 : ";
+    this -> PrintType(t,os);
+    os << "\n";
     return wire.str();
   }
   auto reg_init = wire_f_list.find(v);
@@ -300,8 +368,6 @@ std::string CodeGenMULFIRRTL::GetWire(
     os << vid << "_r <= mux(reset, "; 
     os << vid << "_" << wire_reg <<", ";
     os << vid << "_f)\n";
-    this -> PrintIndent_body();
-    os << vid << " <= " << vid << "_f\n";
     //, initialize reg with reset and connect to rightside
     // reg out_r: UInt<32>, clk ;;initialize reg for every variable and input/output port in its FIRST Store. -> Hashmap reg_set[out_r] = 1
     //
@@ -311,7 +377,10 @@ std::string CodeGenMULFIRRTL::GetWire(
   }
   else{
     int new_wire_num;
-    if ( wire_reg.compare("r") == 0 ){ //the last wire was connected to the register
+    if ( (wire_reg.substr(0,3)).compare("_we") == 0 ){ //the last wire was connected to the register
+      new_wire_num = std::stoi(wire_f_list[v]) + 1;
+    }
+    else if ( wire_reg.compare("r") == 0 ){ //the last wire was connected to the register
       new_wire_num = std::stoi(wire_f_list[v]) + 1;
     }
     else new_wire_num = std::stoi(wire_reg) + 1;
@@ -440,7 +509,7 @@ void CodeGenMULFIRRTL::VisitStmt_(const Store* op) {
         LOG(INFO) << op->buffer_var << "false";
       }
     }
-    std::string ref  = this->GetWire(t,op->buffer_var.get(), stream_body);
+    std::string ref = this->GetNewWireReg(t,op->buffer_var.get(), stream_body);
     for ( auto var_arg = var_to_arg.begin(); var_arg != var_to_arg.end(); ++ var_arg ){
       LOG(INFO) << "MAPPING var_to_arg: " << GetVarID(var_arg->first) << ", " << GetVarID(var_arg->second);
     }
@@ -455,6 +524,12 @@ void CodeGenMULFIRRTL::VisitStmt_(const Store* op) {
         << "Predicated store is not supported";
     Expr base;
     }
+  //Added for Whenelse
+  if (whenelse_layer > 0){
+    LOG(INFO) << "WHENELSE layer: " << whenelse_layer;
+    LOG(INFO) << "WHENELSE VAR: " << GetVarID(op->buffer_var.get());
+    whenelse_var[whenelse_layer]= op->buffer_var.get();
+  }
   in_store = false;
 }
 
@@ -510,6 +585,11 @@ void CodeGenMULFIRRTL::VisitStmt_(const For* op) {
   stream_body << ";;for loop body\n";
   PrintStmt(op->body); 
   stream_body << "\n";
+  for ( auto x = wire_f_list.begin(); x != wire_f_list.end(); ++x ){
+      std::string vid = GetVarID(x->first);
+      this->PrintIndent_body();
+      stream_body << vid << "_f <=  mux(done," << vid << "_r," << vid << "_" << wire_f_list[x->first] << ")\n";
+  }
   this->PrintIndent_body();
   stream_body << ";;end of for loop\n";
   in_for = false;
@@ -602,13 +682,8 @@ void CodeGenMULFIRRTL::VisitStmt_(const IfThenElse* op) {
       LOG(INFO) << "it's a MATCH";
       return;
   }
-  std::regex r("(not)\\(\\((arg)(.*)(== NULL)\\)\\)");
-  std::smatch m;
-  regex_search(cond, m, r); 
-  std::ostringstream match;
-  for (auto x : m) 
-        match << x; 
-  LOG(INFO) << "condition match:" << match.str(); 
+  LOG(INFO) << "whenelse_layer: " << whenelse_layer;
+  whenelse_layer = whenelse_layer + 1;
   PrintIndent_body();
   stream_body << "when " << cond << " :\n";
   LOG(INFO) << "IfThenElse checkpoint 2";
@@ -616,15 +691,57 @@ void CodeGenMULFIRRTL::VisitStmt_(const IfThenElse* op) {
   PrintStmt(op->then_case);
   this->EndScope_body(then_scope);
   LOG(INFO) << "IfThenElse checkpoint 3";
-  if (op->else_case.defined()) {
-    PrintIndent_body();
-    stream_body << "else :\n";
-    int else_scope = BeginScope_body();
-    PrintStmt(op->else_case);
-    this->EndScope_body(else_scope);
+  for ( auto var_it = whenelse_var.begin(); var_it != whenelse_var.end(); ++ var_it ){
+      LOG(INFO) << "ITERATOR checkpoint 1";
+      const Variable * var = var_it->second;
+      LOG(INFO) << var;
+      std::string var_inwhen = GetVarID(var);
+      LOG(INFO) << "ITERATOR checkpoint 2";
+      std::ostringstream we_wire;
+      std::ostringstream prev_wire; 
+      GetWireReg(var->type, var, prev_wire);
+      we_wire << var_inwhen << "_we" << std::to_string(whenelse_layer);
+      PrintIndent_body();
+      stream_body << "wire " << we_wire.str() << " : ";
+      this -> PrintType(var->type,stream_body);
+      stream_body << "\n";
+      stream_body << we_wire.str() << "<=" << prev_wire.str() << "\n";
   }
-  PrintIndent_body();
   LOG(INFO) << "IfThenElse checkpoint 4";
+  PrintIndent_body();
+  stream_body << "else :\n";
+  int else_scope = BeginScope_body();
+  int whenelse_layer_save = whenelse_layer;
+  whenelse_layer = 0; //no need to update whenelse_var for else
+  LOG(INFO) << "IfThenElse checkpoint 5";
+  if (op->else_case.defined()) {
+    PrintStmt(op->else_case);
+  }
+  whenelse_layer = whenelse_layer_save; //need for wire naming
+  LOG(INFO) << "IfThenElse checkpoint 5";
+  for ( auto var_it = whenelse_var.begin(); var_it != whenelse_var.end(); ++ var_it ){
+    std::string var_inwhen = GetVarID(var_it->second);
+    std::ostringstream we_wire;
+    std::ostringstream prev_wire; 
+    const Variable* var = var_it->second;
+    GetWireReg(var->type,var, prev_wire);
+    we_wire << var_inwhen << "_we" << std::to_string(whenelse_layer);
+    stream_body << we_wire.str() << "<=" << prev_wire.str() << "\n";
+    //update the wire for the variable
+    vid_wire_reg[var] = "_we" + std::to_string(whenelse_layer);
+    std::string prev_wire_str = prev_wire.str();
+    std::size_t pos = prev_wire_str.find("_");
+    int wire_name = static_cast<int>(pos) + 1;
+    int name_len = prev_wire_str.length() - wire_name + 1;
+    LOG(INFO) << "IfThenElse checkpoint 6";
+    wire_f_list[var] = prev_wire_str.substr(wire_name, name_len);
+  }
+  LOG(INFO) << "IfThenElse checkpoint 7";
+  whenelse_var.clear();//wipe the variable list
+  this->EndScope_body(else_scope);
+  //PrintIndent_body();
+  whenelse_layer -= 1;
+  LOG(INFO) << "IfThenElse checkpoint 8";
 }
 
 void CodeGenMULFIRRTL::VisitExpr_(const Not *op, std::ostream& os) {  // NOLINT(*)
@@ -655,52 +772,18 @@ void CodeGenMULFIRRTL::VisitExpr_(const Load* op, std::ostream& os) {  // NOLINT
   LOG(INFO) << "checkpoint VisitExpr_ Load";
   // delcare type.
   if (op->type.lanes() == 1) {
-    std::string ref = this->GetWire(op->type, op->buffer_var.get(), stream_body);
+    std::string ref = this->GetWireReg(op->type, op->buffer_var.get(), stream_body);
     os << ref;
   } else {
     CHECK(is_one(op->predicate))
         << "predicated load is not supported";
-    /*Expr base;
-    if (TryGetRamp1Base(op->index, op->type.lanes(), &base)) {
-      std::string ref = GetVecLoad(op->type, op->buffer_var.get(), base);
-      os << ref;
-    } else {
-      // The assignment below introduces side-effect, and the resulting value cannot
-      // be reused across multiple expression, thus a new scope is needed
-      int vec_scope = BeginScope();
-
-      // load seperately.
-      std::string svalue = GetUniqueName("_");
-      this->PrintIndent();
-      this->PrintType(op->type, stream);
-      stream << ' ' << svalue << ";\n";
-      std::string sindex = SSAGetID(PrintExpr(op->index), op->index.type());
-      std::string vid = GetVarID(op->buffer_var.get());
-      Type elem_type = op->type.element_of();
-      for (int i = 0; i < lanes; ++i) {
-        std::ostringstream value_temp;
-        if (!HandleTypeMatch(op->buffer_var.get(), elem_type)) {
-          value_temp << "((";
-          if (op->buffer_var.get()->type.is_handle()) {
-            auto it = alloc_storage_scope_.find(op->buffer_var.get());
-            if (it != alloc_storage_scope_.end()) {
-              PrintStorageScope(it->second, value_temp);
-              value_temp << ' ';
-            }
-          }
-          PrintType(elem_type, value_temp);
-          value_temp << "*)" << vid << ')';
-        } else {
-          value_temp << vid;
-        }
-        value_temp << '[';
-        PrintVecElemLoad(sindex, op->index.type(), i, value_temp);
-        value_temp << ']';
-        PrintVecElemStore(svalue, op->type, i, value_temp.str());
-      }
-      os << svalue;
-      EndScope(vec_scope);
-    }*/
+  }
+  LOG(INFO) << "in_store" << in_store;
+  LOG(INFO) << "store_same" << store_same;
+  if (in_store and !store_same){
+    LOG(INFO) << "in if(in_store and !store_same)";
+    store_same = (store_ref_var == op->buffer_var.get());
+    LOG(INFO) << "store_same" << GetVarID(op->buffer_var.get());
   }
 }
 
@@ -797,6 +880,16 @@ void CodeGenMULFIRRTL::VisitExpr_(const Call *op, std::ostream& os) {  // NOLINT
 //added for multiplier
 void CodeGenMULFIRRTL::VisitExpr_(const Mod *op, std::ostream& os) {  // NOLINT(*)
   PrintBinaryExpr(op, "rem", os, this);
+}
+
+void CodeGenMULFIRRTL::VisitExpr_(const GetBit *op, std::ostream& os) { // NOLINT(*)
+  os << "bits(";
+  PrintExpr(op->a, os);
+  os << ", ";
+  os << PrintExpr(op->index).at(5);
+  os << ", ";
+  os << PrintExpr(op->index).at(5);
+  os << ")";
 }
 
 }  // namespace codegen

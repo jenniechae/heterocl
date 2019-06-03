@@ -114,9 +114,10 @@ class CodeGenMULFIRRTL final : public CodeGenC { /*:
   void VisitExpr_(const Let* op, std::ostream& os) override;  // NOLINT(*)
   //added for multiplier
   void VisitExpr_(const Mod* op, std::ostream& os) override;  // NOLINT(*)
+  void VisitExpr_(const GetBit* op, std::ostream& os) override;
 
-  std::string GetWire(Type t, const Variable* v, std::ostream& os);
-
+  std::string GetWireReg(Type t, const Variable* v, std::ostream& os);
+  std::string GetNewWireReg(Type t, const Variable* v, std::ostream& os);
   //virtual void BindThreadIndex(const IterVar& iv); // NOLINT(*)
 
 
@@ -164,8 +165,10 @@ class CodeGenMULFIRRTL final : public CodeGenC { /*:
   std::unordered_set<const Variable*> volatile_buf_;
   std::unordered_map<const Variable*, int> buf_length_map_;
   std::unordered_map<const Variable*, const Variable*> var_to_arg;
+  std::unordered_map<int, const Variable*> whenelse_var;
   bool in_let{false};
   bool in_store{false};
+  int whenelse_layer{0};
   bool store_same{false};
   const Variable* VARkey_to_arg;
   const Variable* store_ref_var;
